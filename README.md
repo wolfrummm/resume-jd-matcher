@@ -41,13 +41,6 @@ streamlit run app.py
 
 First run downloads `all-MiniLM-L6-v2` (~90MB) to `~/.cache/huggingface/`. Subsequent runs load from cache instantly.
 
-## Deploy to Streamlit Cloud
-
-1. Push to GitHub
-2. Go to [share.streamlit.io](https://share.streamlit.io)
-3. Connect repo → set `app.py` as entry point
-4. Deploy — cold start ~30s (model download), warm requests <2s
-
 ## Project Structure
 
 ```
@@ -64,14 +57,3 @@ resume-jd-matcher/
 │   └── config.toml              # Dark theme config
 └── requirements.txt
 ```
-
-## Resume Bullet Points
-
-**AIML / ML Engineer:**
-> Built a Resume-JD Matcher using HuggingFace `sentence-transformers` (`all-MiniLM-L6-v2`) with chunked mean-pool embeddings and cosine similarity; implemented JD required/preferred section parsing, Impact Score detection across quantified metrics, and skill alias expansion across 402 tech skills in 10 categories.
-
-**Data Science / Analyst:**
-> Developed a semantic text-similarity pipeline (resume vs. JD) with transformer embeddings; built skill taxonomy extraction (402 skills, 10 categories including DSA/OOPS/system design), JD section classification for required vs. preferred weighting, and an Impact Score metric detecting quantified achievements per resume section.
-
-**Full Stack / SDE:**
-> Engineered a modular Streamlit app with PDF parsing (PyMuPDF), scanned-PDF detection, chunked NLP inference (HuggingFace sentence-transformers), multi-resume comparison mode, and session-state result caching; deployed on Streamlit Cloud with dark theme and <2s warm inference.

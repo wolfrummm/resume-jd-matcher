@@ -1,0 +1,95 @@
+{
+  "languages": [
+    "python", "java", "javascript", "typescript", "c++", "c", "go", "rust", "kotlin", "swift",
+    "scala", "r", "matlab", "sql", "bash", "shell", "html", "css", "php", "ruby", "dart",
+    "perl", "haskell", "elixir", "julia", "zig", "solidity"
+  ],
+  "ml_ai": [
+    "machine learning", "deep learning", "neural network", "nlp", "natural language processing",
+    "computer vision", "transformers", "bert", "gpt", "llm", "large language model",
+    "reinforcement learning", "transfer learning", "fine-tuning", "embeddings",
+    "semantic similarity", "classification", "regression", "clustering",
+    "recommendation system", "anomaly detection", "time series", "feature engineering",
+    "model deployment", "mlops", "a/b testing", "generative ai", "rag",
+    "retrieval augmented generation", "diffusion models", "stable diffusion",
+    "object detection", "image segmentation", "speech recognition", "text to speech",
+    "sentiment analysis", "named entity recognition", "ner", "text classification",
+    "question answering", "summarization", "prompt engineering", "langchain",
+    "llamaindex", "vector database", "attention mechanism", "cnn", "rnn", "lstm", "gru",
+    "gan", "vae", "autoencoder", "hyperparameter tuning", "cross validation",
+    "ensemble methods", "random forest", "gradient boosting", "svm", "support vector machine",
+    "naive bayes", "knn", "k-means", "dbscan", "pca", "dimensionality reduction",
+    "data augmentation", "batch normalization", "dropout", "backpropagation",
+    "loss function", "optimization", "adam", "sgd", "learning rate scheduling"
+  ],
+  "ml_frameworks": [
+    "tensorflow", "pytorch", "keras", "scikit-learn", "xgboost", "lightgbm", "catboost",
+    "huggingface", "sentence-transformers", "spacy", "nltk", "opencv", "yolo",
+    "fastai", "jax", "flax", "transformers", "diffusers", "accelerate",
+    "mlflow", "wandb", "weights and biases", "optuna", "ray tune", "onnx",
+    "tensorrt", "triton", "bentoml", "seldon", "torchserve", "torchvision",
+    "torchaudio", "torchtext", "detectron2", "mmdetection", "ultralytics",
+    "langchain", "llamaindex", "pinecone", "weaviate", "chroma", "faiss",
+    "milvus", "qdrant"
+  ],
+  "data": [
+    "pandas", "numpy", "matplotlib", "seaborn", "plotly", "tableau", "power bi",
+    "data analysis", "data visualization", "etl", "data pipeline", "data cleaning",
+    "statistical analysis", "hypothesis testing", "nosql", "spark", "hadoop",
+    "airflow", "dbt", "kafka", "flink", "hive", "presto", "snowflake",
+    "databricks", "data warehouse", "data lake", "data lakehouse",
+    "looker", "metabase", "grafana", "kibana", "superset",
+    "excel", "google sheets", "scipy", "statsmodels", "bayesian", "a/b testing",
+    "experiment design", "feature store", "data governance", "data quality",
+    "pyspark", "polars", "dask", "vaex"
+  ],
+  "web_backend": [
+    "react", "next.js", "vue", "angular", "node.js", "express", "django", "flask", "fastapi",
+    "spring boot", "rest api", "graphql", "microservices", "websocket", "oauth", "jwt",
+    "nestjs", "fastify", "hapi", "gin", "fiber", "echo", "actix", "axum",
+    "asp.net", "laravel", "rails", "phoenix", "remix", "svelte", "solid",
+    "tailwind", "bootstrap", "sass", "webpack", "vite", "esbuild",
+    "grpc", "thrift", "protobuf", "event driven", "message queue",
+    "api gateway", "service mesh", "istio", "envoy"
+  ],
+  "cloud_devops": [
+    "aws", "gcp", "azure", "docker", "kubernetes", "ci/cd", "github actions",
+    "terraform", "ansible", "linux", "nginx", "redis", "rabbitmq",
+    "elasticsearch", "firebase", "vercel", "railway", "render",
+    "ec2", "s3", "lambda", "rds", "dynamodb", "sqs", "sns", "cloudfront",
+    "eks", "ecs", "fargate", "gke", "cloud run", "bigquery", "pubsub",
+    "aks", "cosmos db", "azure functions", "helm", "argocd", "jenkins",
+    "gitlab ci", "circleci", "travis ci", "prometheus", "grafana",
+    "datadog", "new relic", "sentry", "pulumi", "cdk", "cloudformation",
+    "vault", "consul", "nomad", "serverless", "infrastructure as code",
+    "devsecops", "sre", "observability", "monitoring", "logging"
+  ],
+  "databases": [
+    "mysql", "postgresql", "mongodb", "sqlite", "cassandra", "dynamodb", "firebase",
+    "supabase", "oracle", "redis", "neo4j", "cockroachdb", "tidb", "planetscale",
+    "neon", "turso", "clickhouse", "timescaledb", "influxdb", "arangodb",
+    "couchdb", "hbase", "vitess", "pgvector"
+  ],
+  "tools_practices": [
+    "git", "github", "gitlab", "jira", "agile", "scrum", "figma", "postman",
+    "swagger", "jupyter", "vs code", "linux", "streamlit", "gradio",
+    "notion", "confluence", "trello", "asana", "slack", "discord",
+    "docker compose", "makefile", "pre-commit", "black", "pylint", "eslint",
+    "prettier", "jest", "pytest", "unittest", "selenium", "cypress",
+    "playwright", "storybook", "nx", "lerna", "turborepo",
+    "design patterns", "solid principles", "clean code", "tdd", "bdd",
+    "code review", "pair programming", "documentation"
+  ],
+  "india_specific": [
+    "dsa", "data structures", "algorithms", "competitive programming", "oops",
+    "object oriented programming", "dbms", "database management", "os",
+    "operating systems", "computer networks", "cn", "system design",
+    "low level design", "high level design", "lld", "hld",
+    "core java", "core python", "problem solving", "aptitude"
+  ],
+  "soft_skills": [
+    "communication", "teamwork", "leadership", "problem solving", "critical thinking",
+    "collaboration", "mentoring", "project management", "stakeholder management",
+    "time management", "adaptability", "creativity", "analytical thinking"
+  ]
+}

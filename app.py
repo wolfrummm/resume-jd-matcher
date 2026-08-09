@@ -18,6 +18,7 @@ Improvements implemented:
 
 import streamlit as st
 import plotly.graph_objects as go
+from matcher import compute_weighted_overall_score, highlight_keywords, batch_compute_similarity
 
 from matcher import (
     load_model,
@@ -81,10 +82,11 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     display: inline-block; padding: 3px 10px; border-radius: 999px;
     font-size: 0.76rem; font-weight: 500; margin: 3px;
 }
-.pill-green  { background: #dcfce7; color: #166534; }
-.pill-red    { background: #fee2e2; color: #991b1b; }
-.pill-blue   { background: #dbeafe; color: #1e40af; }
-.pill-amber  { background: #fef3c7; color: #92400e; }
+
+.pill-green  { background: rgba(34,197,94,0.15);  color: #4ade80; border: 1px solid rgba(34,197,94,0.35); }
+.pill-red    { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.35); }
+.pill-blue   { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.35); }
+.pill-amber  { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.35); }
 
 .suggestion-box {
     background: #0f172a; border-left: 3px solid #6366f1;
@@ -184,7 +186,7 @@ if mode == "Single Resume":
         resume_text = ""
         if uploaded_pdf is not None:
             try:
-                raw_text, is_scanned = extract_text_from_pdf(uploaded_pdf)
+                raw_text, is_scanned, heading_lines = extract_text_from_pdf(uploaded_pdf)
                 # #11 Scanned PDF warning
                 if is_scanned:
                     st.warning(
@@ -197,6 +199,7 @@ if mode == "Single Resume":
                 st.error(str(e))
                 st.stop()
         elif pasted_resume.strip():
+            heading_lines = None
             resume_text = clean_text(pasted_resume)
 
         jd_text = clean_text(jd_input)
@@ -208,15 +211,29 @@ if mode == "Single Resume":
                 st.warning(err)
             st.stop()
 
-        with st.spinner("Analyzing..."):
-            sections = split_into_sections(resume_text)
+        with st.status("Analyzing resume against JD...", expanded=False) as status:
+            status.write("Splitting resume into sections...")
+            sections = split_into_sections(resume_text, heading_lines)
+
+            status.write("Scoring each section against the JD...")
             section_scores = compute_section_scores(sections, jd_text, model)
-            overall_score = round(compute_similarity(resume_text, jd_text, model) * 100, 1)
-            gap = analyze_skill_gap(resume_text, jd_text)
+
+            status.write("Computing overall semantic similarity...")
+            raw_score = round(compute_similarity(resume_text, jd_text, model) * 100, 1)
+            overall_score = compute_weighted_overall_score(section_scores, raw_score)  # #7
+
+            status.write("Running skill gap analysis...")
+            gap = analyze_skill_gap(resume_text, jd_text, model=model)  # #4/#6
+
+            status.write("Scoring impact language...")
             impact = compute_impact_score(resume_text, sections)
+
+            status.write("Generating suggestions and bullets...")
             suggestions = get_suggestions(gap, section_scores, impact)
             calibration = get_score_calibration(overall_score, gap["match_rate"])
             bullets = generate_resume_bullets(gap["matched"], impact["count"], overall_score, gap["match_rate"])
+
+            status.update(label="Analysis complete ✅", state="complete", expanded=False)
 
         st.session_state.results = {
             "type": "single",
@@ -228,6 +245,7 @@ if mode == "Single Resume":
             "suggestions": suggestions,
             "calibration": calibration,
             "bullets": bullets,
+            "resume_text": resume_text,   # needed for #10 highlighting
         }
 
     # ── Render results ─────────────────────────────────────────────────────────
@@ -345,7 +363,6 @@ if mode == "Single Resume":
                 with gcol2:
                     st.markdown('<div class="section-header">❌ Missing Skills</div>', unsafe_allow_html=True)
                     if gap["missing"]:
-                        # Sort: required first
                         req_missing = [s for s in gap["missing"] if s in required_set]
                         pref_missing = [s for s in gap["missing"] if s in preferred_set and s not in required_set]
                         other_missing = [s for s in gap["missing"] if s not in required_set and s not in preferred_set]
@@ -364,6 +381,23 @@ if mode == "Single Resume":
                             st.markdown(pills, unsafe_allow_html=True)
                     else:
                         st.success("No missing skills — great alignment!")
+
+                if gap.get("possible_matches"):
+                    st.markdown('<div class="section-header">🟡 Possible Matches (unverified)</div>', unsafe_allow_html=True)
+                    st.caption("Semantically similar phrasing found — not an exact keyword match, review manually.")
+                    pills = " ".join([
+                        f'<span class="pill pill-amber">{s} ({score:.2f})</span>'
+                        for s, score in gap["possible_matches"].items()
+                    ])
+                    st.markdown(pills, unsafe_allow_html=True)
+
+                with st.expander("🔍 How the JD was parsed (Required vs Preferred)"):
+                    jd_sec = gap["jd_sections"]
+                    st.caption("Verify this looks right — misclassified lines can skew Required Skills %.")
+                    st.markdown("**Detected as Required:**")
+                    st.text(jd_sec["required"][:800] or "(none detected)")
+                    st.markdown("**Detected as Preferred:**")
+                    st.text(jd_sec["preferred"][:800] or "(none detected)")
 
                 if gap["resume_only"]:
                     st.markdown('<div class="section-header">🔵 In Resume, Not in JD</div>', unsafe_allow_html=True)
@@ -418,12 +452,52 @@ Add bullet points like:
 
         # ── Tab 6: Raw Sections ───────────────────────────────────────────────
         with tab6:
+            st.markdown('<div class="section-header">🖍️ Highlighted Resume</div>', unsafe_allow_html=True)
+            st.caption("🟢 matched skill · 🔴 missing skill (from JD)")
+            highlighted = highlight_keywords(res["resume_text"], gap["matched"], gap["missing"])
+            st.markdown(
+                f'<div class="bullet-box" style="font-family:inherit;max-height:450px;overflow-y:auto">{highlighted}</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown('<div class="section-header">Raw Sections</div>', unsafe_allow_html=True)
+
             if sections:
                 for sname, scontent in sections.items():
                     with st.expander(f"{format_section_name(sname)}  ({len(scontent)} chars)"):
                         st.text(scontent[:1000] + ("…" if len(scontent) > 1000 else ""))
             else:
                 st.info("No sections to display.")
+
+        st.divider()
+        report_md = f"""# Resume-JD Match Report
+
+## Scores
+- Semantic Similarity: {overall_score}%
+- Required Skills Match: {gap['required_match_rate']:.0f}% ({len(gap['matched_required'])}/{len(gap['required_skills'])})
+- Impact Score: {impact['score']} ({impact['label']})
+- All Keywords Match: {gap['match_rate']:.0f}% ({len(gap['matched'])}/{len(gap['jd_skills'])})
+
+## Matched Skills
+{', '.join(gap['matched']) if gap['matched'] else 'None'}
+
+## Missing Required Skills
+{', '.join(gap['missing_required']) if gap['missing_required'] else 'None'}
+
+## Missing Skills (all)
+{', '.join(gap['missing']) if gap['missing'] else 'None'}
+
+## Suggestions
+{chr(10).join(f"- {s}" for s in suggestions) if suggestions else '- No suggestions — strong match!'}
+
+## Resume Bullets
+{chr(10).join(f"**{track}**: {bullet}" for track, bullet in bullets.items())}
+"""
+        st.download_button(
+            "⬇️ Download Report (Markdown)",
+            data=report_md,
+            file_name="resume_jd_match_report.md",
+            mime="text/markdown",
+        )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -434,10 +508,21 @@ else:
     jd_input_cmp = st.text_area("JD (compare)", height=180, placeholder="Paste job description here...", label_visibility="collapsed")
 
     st.markdown("#### 📄 Resumes to Compare")
-    st.caption("Upload up to 3 resume PDFs or paste text. Leave unused slots empty.")
+    st.caption("Upload up to 6 resume PDFs or paste text. Leave unused slots empty.")
+
+    if "num_compare_resumes" not in st.session_state:
+        st.session_state.num_compare_resumes = 2
+
+    add_col, remove_col, _ = st.columns([1, 1, 4])
+    with add_col:
+        if st.button("➕ Add resume") and st.session_state.num_compare_resumes < 6:
+            st.session_state.num_compare_resumes += 1
+    with remove_col:
+        if st.button("➖ Remove last") and st.session_state.num_compare_resumes > 2:
+            st.session_state.num_compare_resumes -= 1
 
     resume_inputs = []
-    cols = st.columns(3)
+    cols = st.columns(st.session_state.num_compare_resumes)
     for i, col in enumerate(cols):
         with col:
             st.markdown(f"**Resume {i+1}**")
@@ -457,12 +542,13 @@ else:
             st.warning("Please paste a job description (at least 100 characters).")
             st.stop()
 
-        compare_results = []
+        # Resolve all texts first, then encode/analyze in one batched pass
+        valid = []
         for inp in resume_inputs:
             rtext = ""
             if inp["pdf"]:
                 try:
-                    raw, is_scanned = extract_text_from_pdf(inp["pdf"])
+                    raw, is_scanned, heading_lines = extract_text_from_pdf(inp["pdf"])
                     if is_scanned:
                         st.warning(f"⚠️ '{inp['label']}' appears to be a scanned PDF — skipping.")
                         continue
@@ -473,25 +559,30 @@ else:
             elif inp["text"].strip():
                 rtext = clean_text(inp["text"])
 
-            if not rtext or len(rtext) < 150:
-                continue
+            if rtext and len(rtext) >= 150:
+                valid.append({"label": inp["label"], "text": rtext})
 
-            with st.spinner(f"Analyzing {inp['label']}..."):
-                sections = split_into_sections(rtext)
-                overall = round(compute_similarity(rtext, jd_text_cmp, model) * 100, 1)
-                gap = analyze_skill_gap(rtext, jd_text_cmp)
-                impact = compute_impact_score(rtext, sections)
-                compare_results.append({
-                    "label": inp["label"],
-                    "overall": overall,
-                    "req_rate": gap["required_match_rate"],
-                    "kw_rate": gap["match_rate"],
-                    "impact": impact["score"],
-                    "impact_label": impact["label"],
-                    "matched": len(gap["matched"]),
-                    "missing_req": gap["missing_required"],
-                    "gap": gap,
-                })
+        compare_results = []
+        if valid:
+            with st.spinner(f"Analyzing {len(valid)} resume(s)..."):
+                overall_scores = batch_compute_similarity(
+                    [v["text"] for v in valid], jd_text_cmp, model
+                )
+                for v, overall in zip(valid, overall_scores):
+                    sections = split_into_sections(v["text"], heading_lines)
+                    gap = analyze_skill_gap(v["text"], jd_text_cmp, model=model)
+                    impact = compute_impact_score(v["text"], sections)
+                    compare_results.append({
+                        "label": v["label"],
+                        "overall": round(overall * 100, 1),
+                        "req_rate": gap["required_match_rate"],
+                        "kw_rate": gap["match_rate"],
+                        "impact": impact["score"],
+                        "impact_label": impact["label"],
+                        "matched": len(gap["matched"]),
+                        "missing_req": gap["missing_required"],
+                        "gap": gap,
+                    })
 
         if not compare_results:
             st.warning("No valid resumes to compare. Please add at least one resume.")

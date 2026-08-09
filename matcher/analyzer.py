@@ -78,11 +78,18 @@ _IMPACT_PATTERNS = [
     r"\b\d+[\+%]?\s*(x|times|fold|faster|slower|accurate|accuracy|precision|recall|f1|auc|mse|rmse|mae)\b",
     r"\b(latency|throughput|uptime|availability|scalab)\w*\b.{0,30}\d+",
     r"\$\s*\d+",
-    r"\b\d{4,}\b",  # large numbers (10000+)
+    r"\b\d{1,3}(?:,\d{3})+\+?\b",              
+    r"\b\d+(?:\.\d+)?\s*[kKmMbB]\+?\b(?!\w)",  
+    r"\b(?!(?:19|20)\d{2}\b)\d{4,}\+\b",       
     r"\b(top|rank|position|place|winner|finalist)\s+\d+\b",
 ]
 _IMPACT_RE = re.compile("|".join(_IMPACT_PATTERNS), re.IGNORECASE)
 
+_NEGATION_WORDS = re.compile(
+    r"\b(no|not|without|lack(?:ing)?|none|never|unfamiliar with|"
+    r"no experience (?:in|with))\b",
+    re.IGNORECASE,
+)
 
 def _apply_aliases(text: str) -> str:
     """Expand known abbreviations in text before skill extraction."""
@@ -94,15 +101,36 @@ def _apply_aliases(text: str) -> str:
     return " ".join(expanded)
 
 
-def extract_skills_from_text(text: str) -> set[str]:
+def _skill_pattern(skill: str) -> re.Pattern:
+    """
+    Build a boundary-safe regex for a skill. Standard \b fails for skills
+    ending/starting in non-word chars ('c++', 'c#', '.net') because \b needs
+    a word/non-word transition that doesn't exist there. Use lookarounds.
+    """
+    escaped = re.escape(skill)
+    left = r"(?<![\w+#.])"
+    right = r"(?![\w+#.])"
+    return re.compile(left + escaped + right, re.IGNORECASE)
+
+
+_SKILL_PATTERNS: dict[str, re.Pattern] = {skill: _skill_pattern(skill) for skill in ALL_SKILLS}
+
+
+def extract_skills_from_text(text: str, check_negation: bool = False) -> set[str]:
     """Return the set of known skills found in a block of text (with alias expansion)."""
     expanded = _apply_aliases(text)
     text_lower = expanded.lower()
     found = set()
-    for skill in ALL_SKILLS:
-        pattern = r"\b" + re.escape(skill) + r"\b"
-        if re.search(pattern, text_lower):
-            found.add(skill)
+    for skill, pattern in _SKILL_PATTERNS.items():
+        match = pattern.search(text_lower)
+        if not match:
+            continue
+        if check_negation:
+            window_start = max(0, match.start() - 40)
+            preceding = text_lower[window_start:match.start()]
+            if _NEGATION_WORDS.search(preceding):
+                continue  # e.g. "no experience with Java" — don't count it
+        found.add(skill)
     return found
 
 
@@ -132,31 +160,13 @@ def parse_jd_sections(jd_text: str) -> dict[str, str]:
     }
 
 
-def analyze_skill_gap(resume_text: str, jd_text: str) -> dict:
-    """
-    Compare skills in JD vs resume, with required/preferred weighting.
-
-    Returns:
-        {
-            "jd_skills": [...],
-            "required_skills": [...],
-            "preferred_skills": [...],
-            "matched": [...],
-            "matched_required": [...],
-            "matched_preferred": [...],
-            "missing": [...],
-            "missing_required": [...],
-            "resume_only": [...],
-            "match_rate": float,
-            "required_match_rate": float,
-        }
-    """
+def analyze_skill_gap(resume_text: str, jd_text: str, model=None) -> dict:
     jd_sections = parse_jd_sections(jd_text)
 
     jd_skills = extract_skills_from_text(jd_text)
     required_skills = extract_skills_from_text(jd_sections["required"])
     preferred_skills = extract_skills_from_text(jd_sections["preferred"])
-    resume_skills = extract_skills_from_text(resume_text)
+    resume_skills = extract_skills_from_text(resume_text, check_negation=True)
 
     matched = jd_skills & resume_skills
     missing = jd_skills - resume_skills
@@ -164,6 +174,12 @@ def analyze_skill_gap(resume_text: str, jd_text: str) -> dict:
     missing_required = required_skills - resume_skills
     matched_preferred = preferred_skills & resume_skills
     resume_only = resume_skills - jd_skills
+
+    # #4 semantic fallback: catch synonyms exact-match missed (e.g. "ReactJS" vs "react")
+    possible_matches = {}
+    if model is not None and missing:
+        from .embedder import find_semantic_skill_matches
+        possible_matches = find_semantic_skill_matches(sorted(missing), resume_text, model)
 
     match_rate = (len(matched) / len(jd_skills) * 100) if jd_skills else 0.0
     req_match_rate = (len(matched_required) / len(required_skills) * 100) if required_skills else match_rate
@@ -180,8 +196,9 @@ def analyze_skill_gap(resume_text: str, jd_text: str) -> dict:
         "resume_only": sorted(resume_only),
         "match_rate": round(match_rate, 1),
         "required_match_rate": round(req_match_rate, 1),
+        "possible_matches": possible_matches,   # #4 {skill: similarity}
+        "jd_sections": jd_sections,             # #6 for UI transparency
     }
-
 
 def compute_impact_score(resume_text: str, sections: dict) -> dict:
     """

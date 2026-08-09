@@ -5,3 +5,15 @@ from .analyzer import (
     compute_impact_score, get_score_calibration, parse_jd_sections
 )
 from .utils import score_to_label, format_section_name, impact_score_to_color, generate_resume_bullets
+
+from .embedder import (
+    load_model,
+    embed_long_text,
+    compute_similarity,
+    compute_similarity_with_embedding,
+    batch_compute_similarity,
+    compute_weighted_overall_score,
+    find_semantic_skill_matches,
+    compute_section_scores,
+)
+from .utils import highlight_keywords

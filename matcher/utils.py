@@ -5,7 +5,27 @@ Fixes:
   - #10 Streamlit theme config (generated separately)
   - #12 Metric-aware resume bullet generator
 """
+import re
 
+def highlight_keywords(text: str, matched: list[str], missing: list[str]) -> str:
+    """Wrap matched (green) / missing (red) skill occurrences in <mark> tags."""
+    html = text
+
+    for skill in sorted(set(matched), key=len, reverse=True):
+        pattern = re.compile(r"(?<![\w+#.])" + re.escape(skill) + r"(?![\w+#.])", re.IGNORECASE)
+        html = pattern.sub(
+            lambda m: f'<mark style="background:rgba(34,197,94,0.35);color:#e2e8f0;'
+                      f'border-radius:3px;padding:0 2px;">{m.group(0)}</mark>',
+            html,
+        )
+    for skill in sorted(set(missing), key=len, reverse=True):
+        pattern = re.compile(r"(?<![\w+#.])" + re.escape(skill) + r"(?![\w+#.])", re.IGNORECASE)
+        html = pattern.sub(
+            lambda m: f'<mark style="background:rgba(239,68,68,0.35);color:#e2e8f0;'
+                      f'border-radius:3px;padding:0 2px;">{m.group(0)}</mark>',
+            html,
+        )
+    return html.replace("\n", "<br>")
 
 def score_to_label(score: float) -> tuple[str, str]:
     """Convert 0–100 similarity score to (label, color hex)."""

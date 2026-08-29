@@ -11,11 +11,12 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from functools import lru_cache
 
-
-MODEL_NAME = "all-MiniLM-L6-v2"
-# Safe per-chunk limit for this model (512 tokens ≈ 1800 chars)
-CHUNK_CHAR_LIMIT = 1800
-
+from .config import (
+    MODEL_NAME,
+    CHUNK_CHAR_LIMIT,
+    SEMANTIC_SKILL_THRESHOLD,
+    SECTION_WEIGHTS,
+)
 
 @lru_cache(maxsize=1)
 def load_model():
@@ -105,7 +106,7 @@ def find_semantic_skill_matches(
     missing_skills: list[str],
     resume_text: str,
     model: SentenceTransformer,
-    threshold: float = 0.62,
+    threshold: float = SEMANTIC_SKILL_THRESHOLD,
 ) -> dict[str, float]:
     """
     For JD skills that didn't exact-match, check if a semantically similar
@@ -130,9 +131,6 @@ def find_semantic_skill_matches(
             matches[skill] = round(best, 2)
     return matches
 
-_SECTION_WEIGHTS = {"skills": 0.35, "experience": 0.35, "projects": 0.20, "education": 0.05, "summary": 0.05}
-
-
 def compute_weighted_overall_score(section_scores: dict, fallback_score: float) -> float:
     """
     Blend section scores using weights favoring skills/experience/projects,
@@ -144,7 +142,7 @@ def compute_weighted_overall_score(section_scores: dict, fallback_score: float) 
 
     weighted_sum, weight_total = 0.0, 0.0
     for section, score in section_scores.items():
-        w = _SECTION_WEIGHTS.get(section, 0.05)
+        w = SECTION_WEIGHTS.get(section, 0.05)
         weighted_sum += score * w
         weight_total += w
 

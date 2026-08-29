@@ -18,6 +18,7 @@ Improvements implemented:
 
 import streamlit as st
 import plotly.graph_objects as go
+from matcher.config import MIN_RESUME_TEXT_LENGTH
 from matcher import compute_weighted_overall_score, highlight_keywords, batch_compute_similarity
 
 from matcher import (
@@ -568,7 +569,7 @@ else:
             elif inp["text"].strip():
                 rtext = clean_text(inp["text"])
 
-            if rtext and len(rtext) >= 150:
+            if rtext and len(rtext) >= MIN_RESUME_TEXT_LENGTH:
                 valid.append({
                     "label": inp["label"],
                     "text": rtext,

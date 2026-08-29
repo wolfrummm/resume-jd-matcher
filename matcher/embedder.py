@@ -9,7 +9,7 @@ Fixes:
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-import streamlit as st
+from functools import lru_cache
 
 
 MODEL_NAME = "all-MiniLM-L6-v2"
@@ -17,9 +17,8 @@ MODEL_NAME = "all-MiniLM-L6-v2"
 CHUNK_CHAR_LIMIT = 1800
 
 
-@st.cache_resource(show_spinner=False)
-def load_model() -> SentenceTransformer:
-    """Load and cache the sentence-transformer model (persists across reruns)."""
+@lru_cache(maxsize=1)
+def load_model():
     return SentenceTransformer(MODEL_NAME)
 
 

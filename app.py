@@ -544,23 +544,36 @@ else:
 
         # Resolve all texts first, then encode/analyze in one batched pass
         valid = []
+
         for inp in resume_inputs:
             rtext = ""
+            heading_lines = None
+
             if inp["pdf"]:
                 try:
                     raw, is_scanned, heading_lines = extract_text_from_pdf(inp["pdf"])
+
                     if is_scanned:
-                        st.warning(f"⚠️ '{inp['label']}' appears to be a scanned PDF — skipping.")
+                        st.warning(
+                            f"⚠️ '{inp['label']}' appears to be a scanned PDF — skipping."
+                        )
                         continue
+
                     rtext = clean_text(raw)
+
                 except ValueError as e:
                     st.error(f"Error reading '{inp['label']}': {e}")
                     continue
+
             elif inp["text"].strip():
                 rtext = clean_text(inp["text"])
 
             if rtext and len(rtext) >= 150:
-                valid.append({"label": inp["label"], "text": rtext})
+                valid.append({
+                    "label": inp["label"],
+                    "text": rtext,
+                    "heading_lines": heading_lines,
+        })
 
         compare_results = []
         if valid:
@@ -569,7 +582,10 @@ else:
                     [v["text"] for v in valid], jd_text_cmp, model
                 )
                 for v, overall in zip(valid, overall_scores):
-                    sections = split_into_sections(v["text"], heading_lines)
+                    sections = split_into_sections(
+                        v["text"],
+                        v["heading_lines"],
+                    )
                     gap = analyze_skill_gap(v["text"], jd_text_cmp, model=model)
                     impact = compute_impact_score(v["text"], sections)
                     compare_results.append({

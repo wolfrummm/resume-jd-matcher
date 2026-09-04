@@ -1,1 +1,1 @@
-datasets>=2.18.0
+pandas>=2.0.0

@@ -31,3 +31,8 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+
+# Evaluation datasets
+evaluation/data/raw/
+evaluation/data/processed/
+evaluation/results/

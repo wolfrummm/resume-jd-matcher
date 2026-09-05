@@ -20,6 +20,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from evaluation.baselines.ablation import (
+    rank_candidates as ablation_rank,
+)
+
 from evaluation.baselines.current_matcher import (
     rank_candidates as current_matcher_rank,
 )
@@ -246,15 +250,32 @@ def main() -> None:
     rankers = {
     "tfidf": tfidf_rank,
     "bm25": bm25_rank,
+
     "minilm": lambda jd, resumes: minilm_rank(
         jd,
         resumes,
         minilm_model,
     ),
-    "current_matcher": lambda jd, resumes: current_matcher_rank(
+
+    "minilm_skills": lambda jd, resumes: ablation_rank(
         jd,
         resumes,
         minilm_model,
+        "minilm_skills",
+    ),
+
+    "minilm_impact": lambda jd, resumes: ablation_rank(
+        jd,
+        resumes,
+        minilm_model,
+        "minilm_impact",
+    ),
+
+    "current_matcher": lambda jd, resumes: ablation_rank(
+        jd,
+        resumes,
+        minilm_model,
+        "full_hybrid",
     ),
 }
 
